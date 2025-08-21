@@ -26,7 +26,7 @@ pipeline {
         stage("Checkout from SCM") {
             steps {
                 git branch: 'main', 
-                    url: 'https://github.com/cmdgi/register-test', 
+                    url: 'https://github.com/cmd-gi/register-test', 
                     credentialsId: 'github'
             }
         }
