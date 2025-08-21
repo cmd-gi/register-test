@@ -4,6 +4,7 @@ pipeline {
     tools {
         jdk 'java17'
         maven 'maven3'
+        dockerTool 'docker'
     }
 
 environment {
@@ -61,17 +62,13 @@ environment {
         stage("Build & Push Docker Image") {
             steps {
                 script {
-                    docker.withRegistry('',DOCKER_PASS) {
-                        docker_image = docker.build "${IMAGE_NAME}"
-                    }
-
-                    docker.withRegistry('',DOCKER_PASS) {
-                        docker_image.push("${IMAGE_TAG}")
-                        docker_image.push('latest')
+                    def dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_PASS) {
+                        dockerImage.push("${IMAGE_TAG}")
+                        dockerImage.push('latest')
                     }
                 }
             }
-
        }
 
        stage("Trivy Scan") {
