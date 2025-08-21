@@ -7,12 +7,14 @@ pipeline {
 
 	environment {
 	    APP_NAME = "register-app-pipeline"
-        RELEASE = "1.0.0"
-        DOCKER_USER = "cmdgi"
-        DOCKER_PASS = 'dockerhub'
-        IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
-        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+            RELEASE = "1.0.0"
+            DOCKER_USER = "cmdgi"
+            DOCKER_PASS = 'dockerhub'
+            IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
+            IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+	    
     }
+
 
     stages {
         stage("Cleanup Workspace") {
@@ -44,22 +46,22 @@ pipeline {
         stage("SonarQube Analysis"){
            steps {
 	           script {
-		            withSonarQubeEnv('sonarqube-server') { 
+		        withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') { 
                         sh "mvn sonar:sonar"
-		            }
+		        }
 	           }	
            }
        }
-
-	   stage("Quality Gate"){
+		stage("Quality Gate"){
 		   steps {
 			   script {
-					waitForQualityGate abortPipeline: false
+					waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonarqube-token'
 				}	
 			}
-	   }
+	
+		}
 
-        stage("Build & Push Docker Image") {
+		stage("Build & Push Docker Image") {
             steps {
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
@@ -72,17 +74,18 @@ pipeline {
                     }
                 }
             }
+
        }
 
 		stage("Trivy Scan") {
            steps {
                script {
-	               sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image cmdgi/register-app-pipeline:latest --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+	            sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image cmdgi/register-app-pipeline:latest --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
                }
            }
        }
 
-       stage ('Cleanup Artifacts') {
+		stage ('Cleanup Artifacts') {
            steps {
                script {
                     sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
@@ -90,5 +93,6 @@ pipeline {
                }
           }
        }
+
     }
 }
